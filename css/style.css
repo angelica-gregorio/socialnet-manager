@@ -1,0 +1,72 @@
+/* css/style.css */
+/* Bootstrap CSS custom property overrides */
+:root {
+    --font-heading: 'Source Serif 4', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --clr-header-bg: #1e3a6e;
+    --clr-page-bg: #dde3ec;
+    --clr-panel-bg: #f7f8fa;
+    --clr-panel-border: #c8cdd8;
+    --clr-blue: #2456b4;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* Application wrapper: full-height flex column layout */
+#app-wrapper {
+    height: calc(100% - var(--header-h));
+    display: flex;
+    flex-direction: column;
+}
+
+/* Panel card styling */
+.sn-panel {
+    /* custom panel card */
+    background: var(--clr-panel-bg);
+    border: 1px solid var(--clr-panel-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.1rem;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Profile picture circular display */
+#profile-pic,
+.profile-thumb {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+}
+
+/* Profile picture hover effect */
+#profile-pic:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+
+/* Friends list item in centre panel */
+#friends-list .friend-entry {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Active profile highlight in left panel */
+#profile-list .profile-item.active {
+    background: var(--clr-list-active);
+    border-color: var(--clr-blue);
+    color: #ffffff;
+}
+
+/* Status bar at bottom */
+#status-bar {
+    background: var(--clr-status-bg);
+    height: var(--statusbar-h);
+    font-size: 0.82rem;
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+}
