@@ -4,10 +4,12 @@
 // ================================================================
 // The supabase global object is made available by the CDN script
 // loaded in the head element of index.html.
-const { createClient } = supabase
+
 const SUPABASE_URL = 'https://cnrqylinmtozrwscehre.supabase.co'
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_g0DT41hsbeu5BGX0O7mpmA_3AH0RqK3'
-const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNucnF5bGlubXRvenJ3c2NlaHJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NjcyODUsImV4cCI6MjA4ODU0MzI4NX0.ZPKxZCdnEeZd7RGLwGSk2dcnGzw4qHwfhak1GLVNPIk'; // Your anon/public key
+
+// Initialize Supabase client
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ================================================================
 // Section 2: Application State
 // ================================================================
