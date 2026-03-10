@@ -102,7 +102,7 @@ function renderFriendsList(friends) {
 */
 async function loadProfileList() {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await db
             .from('profiles')
             .select('id, name')
             .order('name', { ascending: true })
@@ -142,19 +142,19 @@ async function selectProfile(profileId) {
                 el.classList.toggle('active', el.dataset.id === profileId)
             })
         // Fetch the full profile row by primary key
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await db
             .from('profiles')
             .select('*')
             .eq('id', profileId)
             .single()
         if (profileError) throw profileError
         // Fetch friends
-        const { data: friends1, error: e1 } = await supabase
+        const { data: friends1, error: e1 } = await db
             .from('friends')
             .select('profiles!friends_friend_id_fkey(name)')
             .eq('profile_id', profileId)
         if (e1) throw e1
-        const { data: friends2, error: e2 } = await supabase
+        const { data: friends2, error: e2 } = await db
             .from('friends')
             .select('profiles!friends_profile_id_fkey(name)')
             .eq('friend_id', profileId)
@@ -182,7 +182,7 @@ async function addProfile() {
         return
     }
     try {
-        const { data, error } = await supabase
+        const { data, error } = await db
             .from('profiles')
             .insert({ name })
             .select()
@@ -219,7 +219,7 @@ async function lookUpProfile() {
         return
     }
     try {
-        const { data, error } = await supabase
+        const { data, error } = await db
             .from('profiles')
             .select('id, name')
             .ilike('name', `%${query}%`) // % wildcard = partial match
@@ -256,7 +256,7 @@ undone.`)) {
         return
     }
     try {
-        const { error } = await supabase
+        const { error } = await db
             .from('profiles')
             .delete()
             .eq('id', currentProfileId)
@@ -286,7 +286,7 @@ async function changeStatus() {
         return
     }
     try {
-        const { error } = await supabase
+        const { error } = await db
             .from('profiles')
             .update({ status: newStatus })
             .eq('id', currentProfileId)
@@ -314,7 +314,7 @@ async function changePicture() {
         return
     }
     try {
-        const { error } = await supabase
+        const { error } = await db
             .from('profiles')
             .update({ picture: newPicture })
             .eq('id', currentProfileId)
@@ -343,7 +343,7 @@ async function changeQuote() {
         return
     }
     try {
-        const { error } = await supabase
+        const { error } = await db
             .from('profiles')
             .update({ quote: newQuote })
             .eq('id', currentProfileId)
@@ -377,7 +377,7 @@ async function addFriend() {
     }
     try {
         // Step 1: Resolve the friend's name to a UUID
-        const { data: found, error: findError } = await supabase
+        const { data: found, error: findError } = await db
             .from('profiles')
             .select('id, name')
             .ilike('name', friendName)
@@ -399,7 +399,7 @@ async function addFriend() {
         }
 
         // Step 3: Insert the friendship row
-        const { error: insertError } = await supabase
+        const { error: insertError } = await db
             .from('friends')
             .insert({ profile_id: currentProfileId, friend_id: friendId })
 
@@ -438,7 +438,7 @@ async function removeFriend() {
     }
     try {
         // Resolve the name to a UUID
-        const { data: found, error: findError } = await supabase
+        const { data: found, error: findError } = await db
             .from('profiles')
             .select('id, name')
             .ilike('name', friendName)
@@ -454,7 +454,7 @@ async function removeFriend() {
         const friendId = found[0].id
 
         // Delete only the row where profile_id = current AND friend_id = friend
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await db
             .from('friends')
             .delete()
             .eq('profile_id', currentProfileId)
