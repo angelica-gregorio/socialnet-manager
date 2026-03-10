@@ -5,8 +5,8 @@
 // The supabase global object is made available by the CDN script
 // loaded in the head element of index.html.
 
-const SUPABASE_URL = 'https://cnrqylinmtozrwscehre.supabase.co'
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_g0DT41hsbeu5BGX0O7mpmA_3AH0RqK3'; // Your anon/public key
+const SUPABASE_URL             = 'https://xuaxsrcoaicivhhgvqcq.supabase.co'
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_PXJbWFW_U-DPzDwkq7rnjA_n8Y2h9gE'
 
 // Initialize Supabase client
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
