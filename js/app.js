@@ -2,14 +2,16 @@
 // ================================================================
 // Section 1: Supabase Client Initialization
 // ================================================================
+
 // The supabase global object is made available by the CDN script
 // loaded in the head element of index.html.
+const { createClient } = supabase
 
 const SUPABASE_URL             = 'https://zyaawbfqarkpvsmtmkml.supabase.co'
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable__Vs5ph57WTcGeiE0q7dRtQ_xAN5oZMk'
 
 // Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
 // ================================================================
 // Section 2: Application State
 // ================================================================
