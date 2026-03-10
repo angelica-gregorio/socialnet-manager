@@ -6,10 +6,10 @@
 // loaded in the head element of index.html.
 
 const SUPABASE_URL = 'https://cnrqylinmtozrwscehre.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNucnF5bGlubXRvenJ3c2NlaHJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NjcyODUsImV4cCI6MjA4ODU0MzI4NX0.ZPKxZCdnEeZd7RGLwGSk2dcnGzw4qHwfhak1GLVNPIk'; // Your anon/public key
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_g0DT41hsbeu5BGX0O7mpmA_3AH0RqK3'; // Your anon/public key
 
 // Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 // ================================================================
 // Section 2: Application State
 // ================================================================
@@ -85,9 +85,8 @@ function renderFriendsList(friends) {
     friends.forEach(f => {
         const div = document.createElement('div')
         div.className = 'friend-entry'
-        div.textContent = f.name // f.name directly from bidirectional query 
-        // // joined via friend_id -> profiles.name
-        box.appendChild(div)
+        div.textContent = f.name
+        list.appendChild(div)
     })
 }
 
@@ -101,7 +100,7 @@ function renderFriendsList(friends) {
 */
 async function loadProfileList() {
     try {
-        const { data, error } = await db
+        const { data, error } = await supabase
             .from('profiles')
             .select('id, name')
             .order('name', { ascending: true })
@@ -116,9 +115,9 @@ async function loadProfileList() {
         data.forEach(profile => {
             const row = document.createElement('div')
             row.className = 'profile-item'
-            span.textContent = profile.name
+            row.textContent = profile.name
             row.dataset.id = profile.id
-            btn.addEventListener('click', () => selectProfile(profile.id))
+            row.addEventListener('click', () => selectProfile(profile.id))
             container.appendChild(row)
         })
     } catch (err) {
@@ -141,20 +140,24 @@ async function selectProfile(profileId) {
                 el.classList.toggle('active', el.dataset.id === profileId)
             })
         // Fetch the full profile row by primary key
-        const { data: profile, error: profileError } = await db
+        const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', profileId)
             .single()
         if (profileError) throw profileError
-        // Fetch friends, joining to profiles to get each friend's name.
-        // The join alias "profiles!friends_friend_id_fkey" uses the FK name
-        // that Supabase generates from the column and referenced table names.
-        const { data: friends, error: friendsError } = await db
+        // Fetch friends
+        const { data: friends1, error: e1 } = await supabase
             .from('friends')
-            .select('profile_id, friend_id')
-            .or(`profile_id.eq.${profileId},friend_id.eq.${profileId}`)
-        if (friendsError) throw friendsError
+            .select('profiles!friends_friend_id_fkey(name)')
+            .eq('profile_id', profileId)
+        if (e1) throw e1
+        const { data: friends2, error: e2 } = await supabase
+            .from('friends')
+            .select('profiles!friends_profile_id_fkey(name)')
+            .eq('friend_id', profileId)
+        if (e2) throw e2
+        const friends = [...friends1.map(f => ({ name: f.profiles.name })), ...friends2.map(f => ({ name: f.profiles.name }))]
         displayProfile(profile, friends)
     } catch (err) {
         setStatus(`Error selecting profile: ${err.message}`, true)
@@ -177,7 +180,7 @@ async function addProfile() {
         return
     }
     try {
-        const { data, error } = await db
+        const { data, error } = await supabase
             .from('profiles')
             .insert({ name })
             .select()
@@ -214,7 +217,7 @@ async function lookUpProfile() {
         return
     }
     try {
-        const { data, error } = await db
+        const { data, error } = await supabase
             .from('profiles')
             .select('id, name')
             .ilike('name', `%${query}%`) // % wildcard = partial match
@@ -240,7 +243,7 @@ async function lookUpProfile() {
 */
 async function deleteProfile() {
     if (!currentProfileId) {
-        setStatus('Error: No profile is selected. Click a profile in the listfirst.', true)
+        setStatus('Error: No profile is selected. Click a profile in the list first.', true)
         return
     }
     const name = document.getElementById('profile-name').textContent
@@ -251,7 +254,7 @@ undone.`)) {
         return
     }
     try {
-        const { error } = await db
+        const { error } = await supabase
             .from('profiles')
             .delete()
             .eq('id', currentProfileId)
@@ -281,7 +284,7 @@ async function changeStatus() {
         return
     }
     try {
-        const { error } = await db
+        const { error } = await supabase
             .from('profiles')
             .update({ status: newStatus })
             .eq('id', currentProfileId)
@@ -309,7 +312,7 @@ async function changePicture() {
         return
     }
     try {
-        const { error } = await db
+        const { error } = await supabase
             .from('profiles')
             .update({ picture: newPicture })
             .eq('id', currentProfileId)
@@ -319,6 +322,35 @@ async function changePicture() {
         setStatus('Picture updated.')
     } catch (err) {
         setStatus(`Error updating picture: ${err.message}`, true)
+    }
+}
+
+/**
+* changeQuote()
+* Updates the quote column for the current profile in Supabase
+* and immediately reflects the change in the centre panel.
+*/
+async function changeQuote() {
+    if (!currentProfileId) {
+        setStatus('Error: No profile is selected.', true)
+        return
+    }
+    const newQuote = document.getElementById('input-quote').value.trim()
+    if (!newQuote) {
+        setStatus('Error: Quote field is empty.', true)
+        return
+    }
+    try {
+        const { error } = await supabase
+            .from('profiles')
+            .update({ quote: newQuote })
+            .eq('id', currentProfileId)
+        if (error) throw error
+        document.getElementById('profile-quote').textContent = newQuote
+        document.getElementById('input-quote').value = ''
+        setStatus('Quote updated.')
+    } catch (err) {
+        setStatus(`Error updating quote: ${err.message}`, true)
     }
 }
 
@@ -343,7 +375,7 @@ async function addFriend() {
     }
     try {
         // Step 1: Resolve the friend's name to a UUID
-        const { data: found, error: findError } = await db
+        const { data: found, error: findError } = await supabase
             .from('profiles')
             .select('id, name')
             .ilike('name', friendName)
@@ -365,7 +397,7 @@ async function addFriend() {
         }
 
         // Step 3: Insert the friendship row
-        const { error: insertError } = await db
+        const { error: insertError } = await supabase
             .from('friends')
             .insert({ profile_id: currentProfileId, friend_id: friendId })
 
@@ -404,7 +436,7 @@ async function removeFriend() {
     }
     try {
         // Resolve the name to a UUID
-        const { data: found, error: findError } = await db
+        const { data: found, error: findError } = await supabase
             .from('profiles')
             .select('id, name')
             .ilike('name', friendName)
@@ -420,7 +452,7 @@ async function removeFriend() {
         const friendId = found[0].id
 
         // Delete only the row where profile_id = current AND friend_id = friend
-        const { error: deleteError } = await db
+        const { error: deleteError } = await supabase
             .from('friends')
             .delete()
             .eq('profile_id', currentProfileId)
