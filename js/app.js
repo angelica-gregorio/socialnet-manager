@@ -5,8 +5,8 @@
 // The supabase global object is made available by the CDN script
 // loaded in the head element of index.html.
 
-const SUPABASE_URL             = 'https://xuaxsrcoaicivhhgvqcq.supabase.co'
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_PXJbWFW_U-DPzDwkq7rnjA_n8Y2h9gE'
+const SUPABASE_URL             = 'https://zyaawbfqarkpvsmtmkml.supabase.co'
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable__Vs5ph57WTcGeiE0q7dRtQ_xAN5oZMk'
 
 // Initialize Supabase client
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -210,7 +210,7 @@ async function addProfile() {
 * match and selects it in the centre panel.
 */
 async function lookUpProfile() {
-    const query = document.getElementById('input-name').value.trim()
+    const query = document.getElementById('input-lookup').value.trim()
     if (!query) {
         setStatus('Error: Search field is empty. Please enter a name to search.',
             true)
@@ -429,7 +429,7 @@ async function removeFriend() {
         setStatus('Error: No profile is selected.', true)
         return
     }
-    const friendName = document.getElementById('input-friend').value.trim()
+    const friendName = document.getElementById('input-remove-friend').value.trim()
     if (!friendName) {
         setStatus('Error: Friend name field is empty.', true)
         return
@@ -460,7 +460,7 @@ async function removeFriend() {
 
         if (deleteError) throw deleteError
 
-        document.getElementById('input-friend').value = ''
+        document.getElementById('input-remove-friend').value = ''
         await selectProfile(currentProfileId)  // re-render to reflect removal
         setStatus(`"${found[0].name}" removed from friends list.`)
 
@@ -510,12 +510,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         .addEventListener('keydown', e => { if (e.key === 'Enter') addProfile() })
 
     // Pressing Enter in the lookup field triggers Look Up
-    document.getElementById('input-name')
+    document.getElementById('input-lookup')
         .addEventListener('keydown', e => { if (e.key === 'Enter') lookUpProfile() })
 
     // Pressing Enter in the status field triggers Change Status
     document.getElementById('input-status')
         .addEventListener('keydown', e => { if (e.key === 'Enter') changeStatus() })
+
+    // Pressing Enter in the remove friend field triggers Remove Friend
+    document.getElementById('input-remove-friend')
+        .addEventListener('keydown', e => { if (e.key === 'Enter') removeFriend() })
 
     // ── Initial data load ──────────────────────────────────────────
     await loadProfileList()
