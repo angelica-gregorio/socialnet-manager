@@ -4,529 +4,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SocialNet Manager</title>
+    <title>LBYCPG3 SocialNet App - Profile Manager</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
 
+    <link rel="stylesheet" href="css/style.css">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <style>
-        /* ── Design tokens ─────────────────────────────────────── */
-        :root {
-            --bg:          #0d0f14;
-            --bg-panel:    #13161e;
-            --bg-input:    #1a1e2a;
-            --bg-hover:    #1f2433;
-            --border:      #252a38;
-            --border-soft: #1e2230;
-            --accent:      #4f7cff;
-            --accent-dim:  #2a3f80;
-            --accent-glow: rgba(79,124,255,.18);
-            --green:       #30d158;
-            --red:         #ff453a;
-            --yellow:      #ffd60a;
-            --text-1:      #e8eaf2;
-            --text-2:      #8b90a8;
-            --text-3:      #555b72;
-            --radius:      10px;
-            --radius-lg:   16px;
-            --font-display: 'Syne', sans-serif;
-            --font-body:    'Inter', sans-serif;
-            --font-mono:    'IBM Plex Mono', monospace;
-        }
-
-        /* ── Reset & base ──────────────────────────────────────── */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        html, body {
-            height: 100%;
-            background: var(--bg);
-            color: var(--text-1);
-            font-family: var(--font-body);
-            font-size: 14px;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ── Layout shell ──────────────────────────────────────── */
-        #app-shell {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* ── Header ────────────────────────────────────────────── */
-        #app-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            height: 52px;
-            background: #0b0d12;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-            position: relative;
-        }
-
-        #app-header::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
-        }
-
-        #app-title {
-            font-family: var(--font-display);
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-            color: var(--text-2);
-        }
-
-        #app-title span {
-            color: var(--accent);
-        }
-
-        #btn-exit {
-            font-family: var(--font-mono);
-            font-size: 11px;
-            padding: 5px 14px;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-2);
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: all .15s;
-            letter-spacing: .05em;
-        }
-        #btn-exit:hover { border-color: var(--red); color: var(--red); }
-
-        /* ── Main area ─────────────────────────────────────────── */
-        #app-main {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 0;
-            overflow: hidden;
-        }
-
-        /* ── Panels ────────────────────────────────────────────── */
-        .panel {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border-right: 1px solid var(--border);
-        }
-        .panel:last-child { border-right: none; }
-
-        .panel-header {
-            padding: 16px 20px 12px;
-            border-bottom: 1px solid var(--border-soft);
-            flex-shrink: 0;
-        }
-
-        .panel-title {
-            font-family: var(--font-display);
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: .14em;
-            text-transform: uppercase;
-            color: var(--text-3);
-        }
-
-        .panel-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px 20px;
-        }
-
-        .panel-body::-webkit-scrollbar { width: 4px; }
-        .panel-body::-webkit-scrollbar-track { background: transparent; }
-        .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        /* ── Form controls ─────────────────────────────────────── */
-        .field-label {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            font-weight: 500;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            color: var(--text-3);
-            margin-bottom: 6px;
-            display: block;
-        }
-
-        .field-group {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 16px;
-        }
-
-        .sn-input {
-            flex: 1;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 8px 12px;
-            font-family: var(--font-body);
-            font-size: 13px;
-            color: var(--text-1);
-            outline: none;
-            transition: border-color .15s, box-shadow .15s;
-            min-width: 0;
-        }
-
-        .sn-input::placeholder { color: var(--text-3); }
-        .sn-input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .sn-btn {
-            padding: 8px 14px;
-            border: none;
-            border-radius: var(--radius);
-            font-family: var(--font-display);
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: .04em;
-            cursor: pointer;
-            transition: all .15s;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .sn-btn-primary  { background: var(--accent);       color: #fff; }
-        .sn-btn-primary:hover  { background: #6b93ff; }
-        .sn-btn-secondary { background: var(--bg-hover);    color: var(--text-2); border: 1px solid var(--border); }
-        .sn-btn-secondary:hover { color: var(--text-1); border-color: var(--text-3); }
-        .sn-btn-danger   { background: rgba(255,69,58,.15); color: var(--red); border: 1px solid rgba(255,69,58,.3); }
-        .sn-btn-danger:hover   { background: rgba(255,69,58,.25); }
-        .sn-btn-success  { background: rgba(48,209,88,.15);  color: var(--green); border: 1px solid rgba(48,209,88,.3); }
-        .sn-btn-success:hover  { background: rgba(48,209,88,.25); }
-        .sn-btn-warning  { background: rgba(255,214,10,.1);  color: var(--yellow); border: 1px solid rgba(255,214,10,.25); }
-        .sn-btn-warning:hover  { background: rgba(255,214,10,.2); }
-        .sn-btn-full     { width: 100%; justify-content: center; display: flex; margin-bottom: 20px; }
-
-        /* ── Profile list ──────────────────────────────────────── */
-        #profile-list {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .profile-item {
-            padding: 10px 12px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 13px;
-            color: var(--text-2);
-            transition: all .12s;
-            border: 1px solid transparent;
-        }
-        .profile-item:hover { background: var(--bg-hover); color: var(--text-1); }
-        .profile-item.active {
-            background: var(--accent-dim);
-            color: #fff;
-            border-color: var(--accent);
-            font-weight: 600;
-        }
-
-        /* ── Centre panel: profile display ────────────────────── */
-        #centre-panel .panel-body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-
-        #profile-pic-wrap {
-            width: 96px;
-            height: 96px;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 3px solid var(--border);
-            background: var(--bg-input);
-            margin-bottom: 14px;
-            flex-shrink: 0;
-            box-shadow: 0 0 0 6px rgba(79,124,255,.06);
-            transition: border-color .2s;
-        }
-        #profile-pic-wrap:has(img[src]:not([src="resources/images/default.png"])) {
-            border-color: var(--accent);
-        }
-
-        #profile-pic {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        #profile-name {
-            font-family: var(--font-display);
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-1);
-            margin-bottom: 20px;
-        }
-
-        .info-block {
-            width: 100%;
-            text-align: left;
-            margin-bottom: 14px;
-        }
-
-        .info-label {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            font-weight: 500;
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            color: var(--text-3);
-            margin-bottom: 5px;
-        }
-
-        .info-value {
-            background: var(--bg-input);
-            border: 1px solid var(--border-soft);
-            border-radius: var(--radius);
-            padding: 10px 12px;
-            font-size: 13px;
-            color: var(--text-2);
-            min-height: 38px;
-        }
-
-        #friends-box {
-            min-height: 80px;
-            max-height: 180px;
-            overflow-y: auto;
-        }
-        #friends-box::-webkit-scrollbar { width: 3px; }
-        #friends-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        .friend-entry {
-            padding: 6px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            color: var(--text-2);
-            border-bottom: 1px solid var(--border-soft);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .friend-entry:last-child { border-bottom: none; }
-        .friend-entry::before {
-            content: '';
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--green);
-            flex-shrink: 0;
-        }
-
-        .empty-state {
-            font-size: 12px;
-            color: var(--text-3);
-            font-style: italic;
-            padding: 8px 0;
-        }
-
-        /* ── Status bar ────────────────────────────────────────── */
-        #status-bar {
-            height: 34px;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            background: #0a0c10;
-            border-top: 1px solid var(--border);
-            flex-shrink: 0;
-            transition: background .2s;
-        }
-
-        #status-message {
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--text-3);
-            letter-spacing: .04em;
-        }
-
-        #status-bar.error { background: rgba(255,69,58,.12); }
-        #status-bar.error #status-message { color: var(--red); }
-
-        /* ── Section dividers in right panel ───────────────────── */
-        .section-divider {
-            height: 1px;
-            background: var(--border-soft);
-            margin: 4px 0 18px;
-        }
-
-        /* ── Hint text under picture input ─────────────────────── */
-        .field-hint {
-            font-size: 11px;
-            color: var(--text-3);
-            margin-top: -10px;
-            margin-bottom: 14px;
-            font-family: var(--font-mono);
-        }
-
-        /* ── Responsive ────────────────────────────────────────── */
-        @media (max-width: 767px) {
-            #app-shell { height: auto; overflow: auto; }
-
-            #app-main {
-                grid-template-columns: 1fr;
-                overflow: visible;
-            }
-
-            .panel {
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-                overflow: visible;
-            }
-
-            .panel-body { overflow: visible; }
-
-            #centre-panel .panel-body { align-items: stretch; text-align: left; }
-
-            #profile-pic-wrap { margin: 0 auto 14px; }
-        }
-    </style>
 </head>
 
 <body>
-<div id="app-shell">
 
-    <!-- ── Header ──────────────────────────────────────────── -->
+    <!-- ── Header ── -->
     <header id="app-header">
-        <h1 id="app-title">LBYCPG3 &nbsp;<span>SocialNet</span>&nbsp; Profile Manager</h1>
-        <button id="btn-exit">EXIT</button>
+        <h1 id="app-title">LBYCPG3 SocialNet App - Profile Manager</h1>
     </header>
 
-    <!-- ── Three-panel grid ────────────────────────────────── -->
-    <div id="app-main">
+    <!-- ── App Wrapper ── -->
+    <div id="app-wrapper">
 
-        <!-- LEFT: Profile Management -->
-        <div class="panel">
-            <div class="panel-header">
-                <p class="panel-title">Profile Management</p>
+        <!-- ── Three-panel grid ── -->
+        <div id="app-main">
+
+            <!-- LEFT: Profile Management -->
+            <div class="sn-panel">
+                <div class="panel-header">
+                    <p class="panel-title">Profile Management</p>
+                </div>
+                <div class="panel-body">
+
+                    <label class="field-label" for="input-name">Add/Lookup Profile:</label>
+                    <div class="add-lookup-row">
+                        <input type="text" id="input-name" class="sn-input" placeholder="Enter profile name">
+                        <button id="btn-add" class="sn-btn sn-btn-primary">Add</button>
+                    </div>
+                    <div class="add-lookup-row">
+                        <input type="text" id="input-lookup" class="sn-input" placeholder="Search name">
+                        <button id="btn-lookup" class="sn-btn sn-btn-secondary">Lookup</button>
+                        <button id="btn-delete" class="sn-btn sn-btn-danger">Delete</button>
+                    </div>
+
+                    <span class="profiles-label">All Profiles:</span>
+                    <div id="profile-list"></div>
+
+                </div>
             </div>
-            <div class="panel-body">
 
-                <label for="input-name" class="field-label">Add Profile</label>
-                <div class="field-group">
-                    <input type="text" id="input-name" class="sn-input" placeholder="Enter full name">
-                    <button id="btn-add" class="sn-btn sn-btn-primary">Add</button>
+            <!-- CENTRE: Profile Information -->
+            <div class="sn-panel" id="centre-panel">
+                <div class="panel-header">
+                    <p class="panel-title">Profile Information</p>
                 </div>
+                <div class="panel-body">
 
-                <label for="input-lookup" class="field-label">Search Profile</label>
-                <div class="field-group">
-                    <input type="text" id="input-lookup" class="sn-input" placeholder="Enter name to search">
-                    <button id="btn-lookup" class="sn-btn sn-btn-secondary">Look Up</button>
+                    <div id="profile-pic-wrap">
+                        <img id="profile-pic" src="resources/images/default.png" alt="Profile picture">
+                    </div>
+
+                    <h4 id="profile-name">No Profile Selected</h4>
+
+                    <div class="info-block">
+                        <p class="info-label">Current Status:</p>
+                        <div id="profile-status" class="info-value">—</div>
+                    </div>
+
+                    <div class="info-block">
+                        <p class="info-label">Favorite Quote:</p>
+                        <div id="profile-quote" class="info-value">—</div>
+                    </div>
+
+                    <div class="info-block info-block--friends">
+                        <p class="info-label">Friends:</p>
+                        <div id="friends-list" class="info-value"></div>
+                    </div>
+
                 </div>
-
-                <button id="btn-delete" class="sn-btn sn-btn-danger sn-btn-full">
-                    Delete Selected Profile
-                </button>
-
-                <label class="field-label">Profiles</label>
-                <div id="profile-list"></div>
             </div>
-        </div>
 
-        <!-- CENTRE: Profile Information -->
-        <div class="panel" id="centre-panel">
-            <div class="panel-header">
-                <p class="panel-title">Profile Information</p>
+            <!-- RIGHT: Edit Profile -->
+            <div class="sn-panel right-panel">
+                <div class="panel-header">
+                    <p class="panel-title">Edit Profile</p>
+                </div>
+                <div class="panel-body">
+
+                    <div class="edit-section">
+                        <label class="field-label" for="input-status">Change Status:</label>
+                        <input type="text" id="input-status" class="sn-input" placeholder="Enter new status">
+                        <button id="btn-status" class="sn-btn sn-btn-primary sn-btn-full">Update Status</button>
+                    </div>
+
+                    <div class="edit-section">
+                        <label class="field-label" for="input-quote">Change Favorite Quote:</label>
+                        <input type="text" id="input-quote" class="sn-input" placeholder="Enter favorite quote">
+                        <button id="btn-quote" class="sn-btn sn-btn-primary sn-btn-full">Update Quote</button>
+                    </div>
+
+                    <div class="edit-section">
+                        <label class="field-label" for="input-picture">Change Picture:</label>
+                        <input type="text" id="input-picture" class="sn-input" placeholder="Enter image filename">
+                        <button id="btn-picture" class="sn-btn sn-btn-primary sn-btn-full">Update Picture</button>
+                    </div>
+
+                    <div class="edit-section">
+                        <label class="field-label" for="input-friend">Manage Friends:</label>
+                        <div class="friends-manage-row">
+                            <div>
+                                <input type="text" id="input-friend" class="sn-input" placeholder="Friend's name to add">
+                                <button id="btn-add-friend" class="sn-btn sn-btn-success sn-btn-full mt-1">Add Friend</button>
+                            </div>
+                            <div>
+                                <input type="text" id="input-remove-friend" class="sn-input" placeholder="Friend's name to remove">
+                                <button id="btn-remove-friend" class="sn-btn sn-btn-warning sn-btn-full mt-1">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="right-panel-footer">
+                    <button id="btn-exit" class="sn-btn sn-btn-exit sn-btn-full">Exit</button>
+                </div>
             </div>
-            <div class="panel-body">
 
-                <div id="profile-pic-wrap">
-                    <img id="profile-pic" src="resources/images/default.png" alt="Profile picture">
-                </div>
+        </div><!-- /#app-main -->
 
-                <h4 id="profile-name">No Profile Selected</h4>
+        <!-- ── Status bar ── -->
+        <footer id="status-bar">
+            <span id="status-message">Ready. Select a profile from the list or add a new one.</span>
+        </footer>
 
-                <div class="info-block">
-                    <p class="info-label">Status</p>
-                    <div id="profile-status" class="info-value">—</div>
-                </div>
+    </div><!-- /#app-wrapper -->
 
-                <div class="info-block">
-                    <p class="info-label">Favorite Quote</p>
-                    <div id="profile-quote" class="info-value">—</div>
-                </div>
-
-                <div class="info-block" style="flex:1; display:flex; flex-direction:column;">
-                    <p class="info-label">Friends</p>
-                    <div id="friends-list" class="info-value friends-box" id="friends-box"></div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- RIGHT: Edit Profile -->
-        <div class="panel">
-            <div class="panel-header">
-                <p class="panel-title">Edit Profile</p>
-            </div>
-            <div class="panel-body">
-
-                <label for="input-status" class="field-label">Change Status</label>
-                <div class="field-group">
-                    <input type="text" id="input-status" class="sn-input" placeholder="New status message">
-                    <button id="btn-status" class="sn-btn sn-btn-primary">Set</button>
-                </div>
-
-                <label for="input-quote" class="field-label">Change Quote</label>
-                <div class="field-group">
-                    <input type="text" id="input-quote" class="sn-input" placeholder="New favorite quote">
-                    <button id="btn-quote" class="sn-btn sn-btn-primary">Set</button>
-                </div>
-
-                <label for="input-picture" class="field-label">Change Picture</label>
-                <div class="field-group">
-                    <input type="text" id="input-picture" class="sn-input" placeholder="e.g. tesla.png">
-                    <button id="btn-picture" class="sn-btn sn-btn-primary">Set</button>
-                </div>
-                <p class="field-hint">Just type the filename — e.g. <code style="color:var(--accent)">tesla.png</code></p>
-
-                <div class="section-divider"></div>
-
-                <label for="input-friend" class="field-label">Add Friend</label>
-                <div class="field-group">
-                    <input type="text" id="input-friend" class="sn-input" placeholder="Friend's full name">
-                    <button id="btn-add-friend" class="sn-btn sn-btn-success">Add</button>
-                </div>
-
-                <label for="input-remove-friend" class="field-label">Remove Friend</label>
-                <div class="field-group">
-                    <input type="text" id="input-remove-friend" class="sn-input" placeholder="Friend's full name">
-                    <button id="btn-remove-friend" class="sn-btn sn-btn-warning">Remove</button>
-                </div>
-
-            </div>
-        </div>
-
-    </div><!-- /#app-main -->
-
-    <!-- ── Status bar ──────────────────────────────────────── -->
-    <footer id="status-bar">
-        <span id="status-message">Ready. Select a profile from the list.</span>
-    </footer>
-
-</div><!-- /#app-shell -->
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-    crossorigin="anonymous"></script>
-<script src="js/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
