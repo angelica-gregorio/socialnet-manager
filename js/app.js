@@ -52,6 +52,23 @@ function normalisePicturePath(input) {
     return `resources/images/${filename}`
 }
 
+/**
+ * Generates a small circular SVG avatar showing the first letter of the name.
+ * Returns a data-URI string usable as an <img> src.
+ */
+function getInitialAvatar(name) {
+    const initial = (name || '?').trim().charAt(0).toUpperCase()
+    // Pick a hue based on char code for variety
+    const hue = (initial.charCodeAt(0) * 37) % 360
+    const bg  = `hsl(${hue},45%,28%)`
+    const fg  = `hsl(${hue},60%,80%)`
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+        <circle cx="16" cy="16" r="16" fill="${bg}"/>
+        <text x="16" y="21" text-anchor="middle" font-size="15" font-family="Inter,sans-serif" font-weight="600" fill="${fg}">${initial}</text>
+    </svg>`
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
+}
+
 function displayProfile(profile, friends = []) {
     document.getElementById('profile-pic').src =
         profile.picture || 'resources/images/default.png'
@@ -88,7 +105,7 @@ async function loadProfileList() {
     try {
         const { data, error } = await db          // ← FIX: was `supabase`
             .from('profiles')
-            .select('id, name')
+            .select('id, name, picture')
             .order('name', { ascending: true })
         if (error) throw error
 
@@ -104,8 +121,22 @@ async function loadProfileList() {
         data.forEach(profile => {
             const row = document.createElement('div')
             row.className = 'profile-item'
-            row.textContent = profile.name
             row.dataset.id = profile.id
+
+            // Thumbnail: real picture or generated initial avatar
+            const thumbSrc = profile.picture || getInitialAvatar(profile.name)
+            const isInitial = !profile.picture
+
+            const thumb = document.createElement('img')
+            thumb.className = 'profile-thumb' + (isInitial ? ' profile-thumb--initial' : '')
+            thumb.src = thumbSrc
+            thumb.alt = ''
+
+            const nameSpan = document.createElement('span')
+            nameSpan.textContent = profile.name
+
+            row.appendChild(thumb)
+            row.appendChild(nameSpan)
             row.addEventListener('click', () => selectProfile(profile.id))
             container.appendChild(row)
         })
@@ -270,6 +301,15 @@ async function changePicture() {
             .eq('id', currentProfileId)
         if (error) throw error
         document.getElementById('profile-pic').src = newPicture
+        // Also update the thumbnail in the profile list row
+        const listRow = document.querySelector(`#profile-list .profile-item[data-id="${currentProfileId}"]`)
+        if (listRow) {
+            const thumb = listRow.querySelector('.profile-thumb')
+            if (thumb) {
+                thumb.src = newPicture
+                thumb.classList.remove('profile-thumb--initial')
+            }
+        }
         document.getElementById('input-picture').value = ''
         setStatus('Picture updated.')
     } catch (err) {

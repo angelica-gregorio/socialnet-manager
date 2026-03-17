@@ -223,13 +223,16 @@
         }
 
         .profile-item {
-            padding: 10px 12px;
+            padding: 6px 10px;
             border-radius: var(--radius);
             cursor: pointer;
             font-size: 13px;
             color: var(--text-2);
             transition: all .12s;
             border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .profile-item:hover { background: var(--bg-hover); color: var(--text-1); }
         .profile-item.active {
@@ -237,6 +240,21 @@
             color: #fff;
             border-color: var(--accent);
             font-weight: 600;
+        }
+
+        /* Thumbnail in list row */
+        .profile-thumb {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+        }
+        /* Softer border for generated initial avatars */
+        .profile-thumb--initial {
+            border-color: transparent;
         }
 
         /* ── Centre panel: profile display ────────────────────── */
