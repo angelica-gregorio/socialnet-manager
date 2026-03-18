@@ -10,6 +10,15 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable__Vs5ph57WTcGeiE0q7dRtQ_xAN5oZMk
 // Initialize Supabase client — use `db` for ALL queries
 const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
 
+function getSecureImageUrl(url) {
+    if (!url) return null;
+    // If it's a private Vercel URL, route it through our secure proxy
+    if (url.includes('.private.blob.vercel-storage.com')) {
+        return `/api/get-avatar?url=${encodeURIComponent(url)}`;
+    }
+    // Otherwise, return the normal path (for legacy local images)
+    return url;
+}
 // ================================================================
 // Section 2: Application State
 // ================================================================
@@ -27,8 +36,8 @@ function setStatus(message, isError = false) {
 }
 
 function clearCentrePanel() {
-    document.getElementById('profile-pic').src = 'resources/images/default.png'
-    document.getElementById('profile-name').textContent = 'No Profile Selected'
+document.getElementById('profile-pic').src = getSecureImageUrl(profile.picture) || 'resources/images/default.png'    
+document.getElementById('profile-name').textContent = 'No Profile Selected'
     document.getElementById('profile-status').textContent = '—'
     document.getElementById('profile-quote').textContent = '—'
     document.getElementById('friends-list').innerHTML = ''
@@ -282,66 +291,85 @@ async function changeStatus() {
     }
 }
 
-async function changePicture() {
-    if (!currentProfileId) {
-        setStatus('Error: No profile is selected.', true)
-        return
-    }
-    
-    const fileInput = document.getElementById('input-picture')
-    const file = fileInput.files[0]
+import busboy from 'busboy';
+import sharp from 'sharp';
+import { put } from '@vercel/blob';
 
-    if (!file) {
-        setStatus('Error: Please select an image file first.', true)
-        return
-    }
+// REQUIRED: Vercel must not pre-parse the body so busboy can read the raw stream.
+export const config = {
+  api: {
+    bodyParser: false,
+    sizeLimit: "10mb",
+  },
+};
 
-    setStatus('Uploading image... Please wait.')
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
 
-    try {
-        // 1. Pack the file into FormData
-        const formData = new FormData()
-        formData.append('file', file)
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    return res.status(500).json({ error: 'Server configuration error: Token missing.' });
+  }
 
-        // 2. Send the file to your Vercel API endpoint
-        // NOTE: Adjust the URL path if your Vercel function is routed differently
-        const uploadRes = await fetch('/api/upload-avatar', {
-            method: 'POST',
-            body: formData
-        })
+  return new Promise((resolve) => {
+    const bb = busboy({ headers: req.headers });
+    let fileBuffer = null;
+    let fileName = 'upload.webp';
 
-        if (!uploadRes.ok) throw new Error('Failed to upload image to server.')
-        
-        // Vercel Blob returns the saved object, which includes the public 'url'
-        const blobData = await uploadRes.json()
-        const newPictureUrl = blobData.url 
+    // Collect file stream into memory
+    bb.on('file', (name, file, info) => {
+      fileName = info.filename;
+      const chunks = [];
+      file.on('data', (data) => chunks.push(data));
+      file.on('end', () => { fileBuffer = Buffer.concat(chunks); });
+    });
 
-        // 3. Update Supabase with the new Vercel Blob URL
-        const { error } = await db                                 
-            .from('profiles')
-            .update({ picture: newPictureUrl })
-            .eq('id', currentProfileId)
-            
-        if (error) throw error
+    bb.on('finish', async () => {
+      if (!fileBuffer) {
+        res.status(400).json({ error: 'No file found in the upload.' });
+        return resolve();
+      }
 
-        // 4. Update the UI
-        document.getElementById('profile-pic').src = newPictureUrl
-        
-        const listRow = document.querySelector(`#profile-list .profile-item[data-id="${currentProfileId}"]`)
-        if (listRow) {
-            const thumb = listRow.querySelector('.profile-thumb')
-            if (thumb) {
-                thumb.src = newPictureUrl
-                thumb.classList.remove('profile-thumb--initial')
-            }
-        }
-        
-        fileInput.value = '' // Clear the file input
-        setStatus('Picture updated successfully.')
-        
-    } catch (err) {
-        setStatus(`Error updating picture: ${err.message}`, true)
-    }
+      try {
+        // Image processing using sharp (from section 6.3)
+        const processedBuffer = await sharp(fileBuffer)
+          .rotate()                        
+          .resize(256, 256, {
+            fit: "inside",                 
+            withoutEnlargement: true,      
+          })
+          .webp({ quality: 80, effort: 6, alphaQuality: 80 })
+          .toBuffer();                     
+
+        // Create a safe filename with a timestamp to avoid caching issues
+        const baseName = fileName.split('.')[0].toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const webpFilename = `${baseName}-${Date.now()}.webp`;
+
+        // Upload to Vercel Blob
+        const blob = await put(`avatars/${webpFilename}`, processedBuffer, {
+          access: 'public',
+          token: token
+        });
+
+        // Return the new URL back to the browser
+        res.status(200).json({ url: blob.url });
+
+      } catch (error) {
+        res.status(500).json({ error: 'Image processing or upload failed: ' + error.message });
+      }
+      resolve();
+    });
+
+    bb.on('error', (error) => {
+      res.status(500).json({ error: 'Error parsing form data: ' + error.message });
+      resolve();
+    });
+
+    // Pipe the request stream into busboy
+    req.pipe(bb);
+  });
 }
 
 async function changeQuote() {
