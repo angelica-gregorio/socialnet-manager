@@ -291,85 +291,61 @@ async function changeStatus() {
     }
 }
 
-import busboy from 'busboy';
-import sharp from 'sharp';
-import { put } from '@vercel/blob';
-
-// REQUIRED: Vercel must not pre-parse the body so busboy can read the raw stream.
-export const config = {
-  api: {
-    bodyParser: false,
-    sizeLimit: "10mb",
-  },
-};
-
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+async function changePicture() {
+  if (!currentProfileId) {
+    setStatus('Error: No profile is selected.', true)
+    return
   }
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    return res.status(500).json({ error: 'Server configuration error: Token missing.' });
+  const fileInput = document.getElementById('input-picture')
+  const file = fileInput.files[0]
+
+  if (!file) {
+    setStatus('Error: Please select an image file first.', true)
+    return
   }
 
-  return new Promise((resolve) => {
-    const bb = busboy({ headers: req.headers });
-    let fileBuffer = null;
-    let fileName = 'upload.webp';
+  setStatus('Uploading and compressing image... Please wait.')
 
-    // Collect file stream into memory
-    bb.on('file', (name, file, info) => {
-      fileName = info.filename;
-      const chunks = [];
-      file.on('data', (data) => chunks.push(data));
-      file.on('end', () => { fileBuffer = Buffer.concat(chunks); });
-    });
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
 
-    bb.on('finish', async () => {
-      if (!fileBuffer) {
-        res.status(400).json({ error: 'No file found in the upload.' });
-        return resolve();
-      }
+    const response = await fetch('/api/upload-avatar', {
+      method: 'POST',
+      body: formData 
+    })
 
-      try {
-        // Image processing using sharp (from section 6.3)
-        const processedBuffer = await sharp(fileBuffer)
-          .rotate()                        
-          .resize(256, 256, {
-            fit: "inside",                 
-            withoutEnlargement: true,      
-          })
-          .webp({ quality: 80, effort: 6, alphaQuality: 80 })
-          .toBuffer();                     
+    const rawText = await response.text();
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch {
+      const preview = rawText.slice(0, 200).replace(/\s+/g, " ").trim();
+      throw new Error("HTTP " + response.status + " (not JSON). " +
+                      ' | Response: "' + preview + '"')
+    }
 
-        // Create a safe filename with a timestamp to avoid caching issues
-        const baseName = fileName.split('.')[0].toLowerCase().replace(/[^a-z0-9]/g, '_');
-        const webpFilename = `${baseName}-${Date.now()}.webp`;
+    if (!response.ok) {
+      throw new Error(result.error || `HTTP ${response.status} Error`);
+    }
 
-        // Upload to Vercel Blob
-        const blob = await put(`avatars/${webpFilename}`, processedBuffer, {
-          access: 'public',
-          token: token
-        });
+    const newPictureUrl = result.url;
 
-        // Return the new URL back to the browser
-        res.status(200).json({ url: blob.url });
+    const { error } = await db
+      .from('profiles')
+      .update({ picture: newPictureUrl })
+      .eq('id', currentProfileId)
 
-      } catch (error) {
-        res.status(500).json({ error: 'Image processing or upload failed: ' + error.message });
-      }
-      resolve();
-    });
+    if (error) throw error
 
-    bb.on('error', (error) => {
-      res.status(500).json({ error: 'Error parsing form data: ' + error.message });
-      resolve();
-    });
+    document.getElementById('profile-pic').src = newPictureUrl
+    fileInput.value = '' 
+    setStatus('Picture successfully updated!')
 
-    // Pipe the request stream into busboy
-    req.pipe(bb);
-  });
+  } catch (err) {
+    setStatus(`Error updating picture: ${err.message}`, true)
+  }
 }
 
 async function changeQuote() {
