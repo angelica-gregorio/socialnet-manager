@@ -287,31 +287,58 @@ async function changePicture() {
         setStatus('Error: No profile is selected.', true)
         return
     }
-    const raw = document.getElementById('input-picture').value
-    if (!raw.trim()) {
-        setStatus('Error: Picture field is empty.', true)
+    
+    const fileInput = document.getElementById('input-picture')
+    const file = fileInput.files[0]
+
+    if (!file) {
+        setStatus('Error: Please select an image file first.', true)
         return
     }
-    // Allow shorthand: "tesla.png" → "resources/images/tesla.png"
-    const newPicture = normalisePicturePath(raw)
+
+    setStatus('Uploading image... Please wait.')
+
     try {
-        const { error } = await db                                 // ← FIX
+        // 1. Pack the file into FormData
+        const formData = new FormData()
+        formData.append('file', file)
+
+        // 2. Send the file to your Vercel API endpoint
+        // NOTE: Adjust the URL path if your Vercel function is routed differently
+        const uploadRes = await fetch('/api/upload-avatar', {
+            method: 'POST',
+            body: formData
+        })
+
+        if (!uploadRes.ok) throw new Error('Failed to upload image to server.')
+        
+        // Vercel Blob returns the saved object, which includes the public 'url'
+        const blobData = await uploadRes.json()
+        const newPictureUrl = blobData.url 
+
+        // 3. Update Supabase with the new Vercel Blob URL
+        const { error } = await db                                 
             .from('profiles')
-            .update({ picture: newPicture })
+            .update({ picture: newPictureUrl })
             .eq('id', currentProfileId)
+            
         if (error) throw error
-        document.getElementById('profile-pic').src = newPicture
-        // Also update the thumbnail in the profile list row
+
+        // 4. Update the UI
+        document.getElementById('profile-pic').src = newPictureUrl
+        
         const listRow = document.querySelector(`#profile-list .profile-item[data-id="${currentProfileId}"]`)
         if (listRow) {
             const thumb = listRow.querySelector('.profile-thumb')
             if (thumb) {
-                thumb.src = newPicture
+                thumb.src = newPictureUrl
                 thumb.classList.remove('profile-thumb--initial')
             }
         }
-        document.getElementById('input-picture').value = ''
-        setStatus('Picture updated.')
+        
+        fileInput.value = '' // Clear the file input
+        setStatus('Picture updated successfully.')
+        
     } catch (err) {
         setStatus(`Error updating picture: ${err.message}`, true)
     }
